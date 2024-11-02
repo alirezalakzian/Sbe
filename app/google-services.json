@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "726238776884",
+    "project_id": "sbepro-50889",
+    "storage_bucket": "sbepro-50889.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:726238776884:android:3da098e0b2dc9512db8461",
+        "android_client_info": {
+          "package_name": "com.example.sbe"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBZgDUMDK5kZsoSi-RSESkFbYORGcdQ_-M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
