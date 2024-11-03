@@ -50,17 +50,23 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             startActivity(intent)
         } else {
             Log.d(TAG, "App is in background, sending notification.")
-            sendNotificationToAll(remoteMessage.notification?.title ?: "عنوان پیش‌فرض", remoteMessage.notification?.body ?: "متن پیش‌فرض", latitude ?: 0.0, longitude ?: 0.0)
+            sendNotificationToAll(
+                remoteMessage.notification?.title ?: "عنوان پیش‌فرض",
+                remoteMessage.notification?.body ?: "متن پیش‌فرض",
+                latitude ?: 0.0,
+                longitude ?: 0.0
+            )
         }
     }
 
 
 
-
-
-
-    @SuppressLint("MissingPermission")
+  //  @SuppressLint("MissingPermission")
     fun sendNotificationToAll(title: String, body: String, latitude: Double, longitude: Double) {
+        // لاگ برای مختصات
+        Log.d(TAG, "Preparing to send notification with title: $title, body: $body")
+        Log.d(TAG, "Latitude: $latitude, Longitude: $longitude")
+
         val intent = Intent(this, MainActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
             putExtra("latitude", latitude)
@@ -80,6 +86,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
         val notificationManager = NotificationManagerCompat.from(this)
 
+        // ایجاد کانال نوتیفیکیشن در صورت نیاز
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
@@ -89,7 +96,9 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             notificationManager.createNotificationChannel(channel)
         }
 
+        // ارسال نوتیفیکیشن
         notificationManager.notify(0, notificationBuilder.build())
+        Log.d(TAG, "Notification sent successfully.")
     }
 
 
