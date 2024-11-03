@@ -93,16 +93,25 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         binding.addLocationButton.setOnClickListener {
             addNewLocation()
         }
+        // دریافت داده‌ها از Intent در هنگام ایجاد Activity
+        val latitude = intent.getDoubleExtra("latitude", 0.0)
+        val longitude = intent.getDoubleExtra("longitude", 0.0)
 
+        if (latitude != 0.0 || longitude != 0.0) {
+            Log.d(TAG, "Intent received onCreate, showing alert dialog with Latitude: $latitude, Longitude: $longitude")
+            showAlertDialog(latitude, longitude)
+        }
 
         // دریافت مختصات از Intent
         intent.getStringExtra("location")?.let { locationJson ->
             val location = Gson().fromJson(locationJson, LatLng::class.java)
             location?.let {
                 mMap.addMarker(MarkerOptions().position(it).title("نقطه جدید"))
-                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(it, 15f)) // زوم روی نقطه
+                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(it, 15f))
             }
         }
+
+
 
         // اتصال به WebSocket
         mainViewModel.connectWebSocket { newPoint ->
@@ -119,7 +128,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             // گوش دادن به تغییرات در LiveData برای نمایش پیام
             mainViewModel.newMessageLiveData.observe(this) { messagePair ->
                 val (title, body) = messagePair
-                showAlertDialog(title, body)
+                //showAlertDialog(title, body)
             }
 
         }
@@ -145,7 +154,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             // اگر تمامی مجوزها قبلاً داده شده‌اند، دریافت توکن را آغاز کنید
             deviceId?.let { id ->
                 mainViewModel.fetchFCMToken(this, id) { token ->
-                    token?.let {
+                    token?.let { it ->
                         Log.d(TAG, "FCM Token received: $it")
                         // ذخیره توکن در SharedPreferences
                         val sharedPreferences = getSharedPreferences("app_prefs", MODE_PRIVATE)
@@ -170,12 +179,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
-    private fun showAlertDialog(title: String, body: String) {
-        AlertDialog.Builder(this)
-            .setTitle(title)
-            .setMessage(body)
-            .setPositiveButton("باشه") { dialog, _ -> dialog.dismiss() }
-            .show()
+    fun showAlertDialog(latitude: Double, longitude: Double) {
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle("نقطه جدید")
+        builder.setMessage("نقطه‌ای جدید در نزدیکی شما ثبت شده است. مختصات: $latitude, $longitude")
+        builder.setPositiveButton("تایید") { dialog, _ -> dialog.dismiss() }
+        builder.setNegativeButton("لغو") { dialog, _ -> dialog.dismiss() }
+        builder.show()
     }
 
 
@@ -187,7 +197,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 Log.d(TAG, "All permissions granted")
                 deviceId?.let { id ->
                     mainViewModel.fetchFCMToken(this, id) { token ->
-                        token?.let {
+                        token?.let { it ->
                             Log.d(TAG, "FCM Token received after permissions granted: $it")
                             // ذخیره توکن در SharedPreferences
                             val sharedPreferences = getSharedPreferences("app_prefs", MODE_PRIVATE)
@@ -195,7 +205,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
                             // ارسال توکن به سرور
                             mainViewModel.fetchFCMToken(this, deviceId!!) { token ->
-                                token?.let {
+                                token?.let { it ->
                                     Log.d(TAG, "FCM Token received: $it")
                                     // ذخیره توکن در SharedPreferences
                                     val sharedPreferences = getSharedPreferences("app_prefs", MODE_PRIVATE)
@@ -330,5 +340,28 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         Log.d(TAG, "Closing WebSocket connection")
         mainViewModel.closeWebSocket()
     }
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        setIntent(intent) // برای دسترسی به داده‌های جدید
+
+        // دریافت مختصات از Intent
+        val latitude = intent?.getDoubleExtra("latitude", 0.0)
+        val longitude = intent?.getDoubleExtra("longitude", 0.0)
+
+        if (latitude != 0.0 || longitude != 0.0) {
+            Log.d(TAG, "New Intent received, showing alert dialog with Latitude: $latitude, Longitude: $longitude")
+            showAlertDialog(latitude ?: 0.0, longitude ?: 0.0)
+        }
+
+        // دریافت مختصات از Intent
+        intent?.getStringExtra("location")?.let { locationJson ->
+            val location = Gson().fromJson(locationJson, LatLng::class.java)
+            location?.let {
+                mMap.addMarker(MarkerOptions().position(it).title("نقطه جدید"))
+                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(it, 15f))
+            }
+        }
+    }
+
 }
 
