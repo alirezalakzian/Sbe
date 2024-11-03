@@ -44,7 +44,7 @@ class MainViewModel : ViewModel() {
             } else {
                 val token = task.result
                 token?.let {
-                    sendTokenToServer(deviceId, it) // ارسال توکن به سرور
+                    sendTokenToServer(context, deviceId, it) // ارسال توکن و deviceId به سرور
                 }
                 callback(token)
             }
@@ -52,18 +52,13 @@ class MainViewModel : ViewModel() {
     }
 
     // ارسال یا به‌روزرسانی توکن در سرور
-    private fun sendTokenToServer(deviceId: String, token: String) {
-        if (isTokenSent) {
-            Log.d(TAG, "توکن قبلاً ارسال شده است و نیازی به ارسال مجدد نیست.")
-            return
-        }
+    fun sendTokenToServer(context: Context, deviceId: String, token: String) {
+        val userTokenData = mapOf("deviceId" to deviceId, "token" to token)
 
-        val tokenData = mapOf("deviceId" to deviceId, "token" to token)
-        RetrofitClient.apiService.sendUserToken(tokenData).enqueue(object : Callback<Void> {
+        RetrofitClient.apiService.sendUserToken(userTokenData).enqueue(object : Callback<Void> {
             override fun onResponse(call: Call<Void>, response: Response<Void>) {
                 if (response.isSuccessful) {
                     Log.d(TAG, "Token successfully updated on server")
-                    isTokenSent = true
                 } else {
                     Log.e(TAG, "Failed to update token on server: ${response.errorBody()?.string()}")
                 }
@@ -74,6 +69,7 @@ class MainViewModel : ViewModel() {
             }
         })
     }
+
 
     // بازیابی توکن ذخیره شده
     fun getStoredToken(sharedPreferences: SharedPreferences): String? {

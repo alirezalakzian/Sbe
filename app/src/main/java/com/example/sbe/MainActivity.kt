@@ -18,7 +18,6 @@ import androidx.core.content.ContextCompat
 import com.example.sbe.databinding.ActivityMainBinding
 import com.example.sbe.databinding.DialogAddLocationBinding
 import com.example.sbe.models.PointData
-import com.example.sbe.network.RetrofitClient
 import com.example.sbe.viewmodel.MainViewModel
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.GeofencingClient
@@ -29,9 +28,8 @@ import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
+import com.google.gson.Gson
+
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
@@ -96,6 +94,16 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             addNewLocation()
         }
 
+
+        // دریافت مختصات از Intent
+        intent.getStringExtra("location")?.let { locationJson ->
+            val location = Gson().fromJson(locationJson, LatLng::class.java)
+            location?.let {
+                mMap.addMarker(MarkerOptions().position(it).title("نقطه جدید"))
+                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(it, 15f)) // زوم روی نقطه
+            }
+        }
+
         // اتصال به WebSocket
         mainViewModel.connectWebSocket { newPoint ->
             runOnUiThread {
@@ -107,11 +115,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 Log.d(TAG, "Added new pin to the map: $newPoint")
             }
 
+
             // گوش دادن به تغییرات در LiveData برای نمایش پیام
             mainViewModel.newMessageLiveData.observe(this) { messagePair ->
                 val (title, body) = messagePair
                 showAlertDialog(title, body)
             }
+
         }
     }
 
@@ -142,7 +152,15 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                         sharedPreferences.edit().putString("fcmToken", it).apply()
 
                         // ارسال توکن به سرور
-                        sendTokenToServer(it)
+                        mainViewModel.fetchFCMToken(this, deviceId!!) { token ->
+                            token?.let {
+                                Log.d(TAG, "FCM Token received: $it")
+                                // ذخیره توکن در SharedPreferences
+                                val sharedPreferences = getSharedPreferences("app_prefs", MODE_PRIVATE)
+                                sharedPreferences.edit().putString("fcmToken", it).apply()
+                            } ?: Log.e(TAG, "خطا در دریافت توکن")
+                        }
+
                     } ?: Log.e(TAG, "خطا در دریافت توکن")
                 }
             } ?: run {
@@ -160,35 +178,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             .show()
     }
 
-    private fun sendTokenToServer(token: String) {
-        val sharedPreferences = getSharedPreferences("app_prefs", MODE_PRIVATE)
-        val savedToken = sharedPreferences.getString("fcmToken", null)
 
-        if (savedToken == token) {
-            Log.d(TAG, "توکن قبلاً ارسال شده و نیازی به ارسال مجدد نیست.")
-            return
-        }
-
-        deviceId?.let {
-            Log.d(TAG, "Sending token to server: $token, deviceId: $it")
-            val userTokenData = mapOf("deviceId" to it, "token" to token)
-            RetrofitClient.apiService.sendUserToken(userTokenData).enqueue(object : Callback<Void> {
-                override fun onResponse(call: Call<Void>, response: Response<Void>) {
-                    if (response.isSuccessful) {
-                        Log.d(TAG, "Token successfully updated on server")
-                        // ذخیره توکن جدید در صورت موفقیت
-                        sharedPreferences.edit().putString("fcmToken", token).apply()
-                    } else {
-                        Log.e(TAG, "Failed to update token on server: ${response.errorBody()?.string()}")
-                    }
-                }
-
-                override fun onFailure(call: Call<Void>, t: Throwable) {
-                    Log.e(TAG, "Error updating token on server: ${t.message}")
-                }
-            })
-        } ?: Log.e(TAG, "Device ID not found. Cannot send token to server.")
-    }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
@@ -204,7 +194,15 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                             sharedPreferences.edit().putString("fcmToken", it).apply()
 
                             // ارسال توکن به سرور
-                            sendTokenToServer(it)
+                            mainViewModel.fetchFCMToken(this, deviceId!!) { token ->
+                                token?.let {
+                                    Log.d(TAG, "FCM Token received: $it")
+                                    // ذخیره توکن در SharedPreferences
+                                    val sharedPreferences = getSharedPreferences("app_prefs", MODE_PRIVATE)
+                                    sharedPreferences.edit().putString("fcmToken", it).apply()
+                                } ?: Log.e(TAG, "خطا در دریافت توکن")
+                            }
+
                         } ?: Log.e(TAG, "خطا در دریافت توکن")
                     }
                 } ?: run {
@@ -333,3 +331,4 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         mainViewModel.closeWebSocket()
     }
 }
+
